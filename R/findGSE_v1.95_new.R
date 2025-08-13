@@ -724,7 +724,9 @@ findGSE_raw <- function(histo="", sizek=0, outdir="", exp_hom=0, species="")
             message(paste("    Warning: data does not follow assumed distribution anymore at itr ",
                       itr, ", fitting stopped.\n", sep=""))
             normal  <- 0
-            if(myyfit==0 && itr==1)
+            # ryandisney: Changed from `if(myyfit == 0 && itr == 1)` to avoid
+            # "'length = N' in coercion to 'logical(1)'" error when `myyfit` is a vector.
+            if (all(myyfit == 0) && itr == 1)
             {
               v<-optim(par=c(1, 1, 1),
                        fn=error_minimize3_raw, x=x, end=end,
@@ -789,7 +791,9 @@ findGSE_raw <- function(histo="", sizek=0, outdir="", exp_hom=0, species="")
           {
             message(paste("    Note on hom fitting: fitting stopped at iter ",
                       itr, ", expected: ", totalitr, "\n",sep=""))
-            if(myyfit==0 && itr==1)
+            # ryandisney: Changed from `if(myyfit == 0 && itr == 1)` to avoid
+            # "'length = N' in coercion to 'logical(1)'" error when `myyfit` is a vector.
+            if(all(myyfit == 0) && itr == 1)
             {
               v<-optim(par=c(1, 1, 1),
                        fn=error_minimize3_raw, x=x, end=end,

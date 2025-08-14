@@ -791,7 +791,7 @@ findGSE_raw <- function(histo="", sizek=0, outdir="", exp_hom=0, species="")
           {
             message(paste("    Note on hom fitting: fitting stopped at iter ",
                       itr, ", expected: ", totalitr, "\n",sep=""))
-            # ryandisney: Changed from `if(myyfit == 0 && itr == 1)` to avoid
+            # ryandisney/20250813/Changed from `if(myyfit == 0 && itr == 1)` to avoid
             # "'length = N' in coercion to 'logical(1)'" error when `myyfit` is a vector.
             if(all(myyfit == 0) && itr == 1)
             {
@@ -1026,18 +1026,39 @@ findGSE_raw <- function(histo="", sizek=0, outdir="", exp_hom=0, species="")
               {
                 dtmp           <- ceiling(abs(round(yfit2[1:end_for_mean]-(1-het_fitting_delta)*hetfit[1:end_for_mean]))/1000) # 2016-08-25
                 ## start of specific in v1.94: from [0.5*het_peak, 1.5*het_peak]
-                offset_count   <- round((fittedyvalues[1:end_for_mean]-yfit2[1:end_for_mean])/1000)
-                offl <- round(0.5*which.max(hetfit))
-                offr <- round(1.5*which.max(hetfit))
-                for (off_i in c(offl:offr))
-                {
-                  if(offset_count[off_i] > 0)
-                  {
-                    dtmp[off_i] <- dtmp[off_i] + offset_count[off_i]
-                  }
-                  else
-                  {
-                    dtmp[off_i] <- dtmp[off_i] - offset_count[off_i]
+                ## ryandisney/20250813/patched for NA/index safety to avoid "missing value" / "length zero" errors
+                end_for_mean <- max(
+                  1,
+                  min(end_for_mean, length(fittedyvalues), length(yfit2), length(hetfit))
+                )
+
+                dtmp <- ceiling(
+                  abs(round(yfit2[1:end_for_mean] - (1 - het_fitting_delta) * hetfit[1:end_for_mean])) / 1000
+                )
+
+                offset_count <- round((fittedyvalues[1:end_for_mean] - yfit2[1:end_for_mean]) / 1000)
+                offset_count[is.na(offset_count)] <- 0
+
+                # Skip adjustment if no usable het signal
+                if (sum(hetfit[1:end_for_mean], na.rm = TRUE) > 0) {
+                  # pick het peak; guard non-finite
+                  peak_slice <- hetfit[1:end_for_mean]
+                  peak_slice[!is.finite(peak_slice)] <- -Inf
+                  peak_idx <- suppressWarnings(which.max(peak_slice))
+
+                  offl <- max(1, floor(0.5 * peak_idx))
+                  offr <- min(end_for_mean, ceiling(1.5 * peak_idx))
+
+                  if (offl <= offr) {
+                    for (off_i in seq.int(offl, offr)) {
+                      oc <- offset_count[off_i]
+                      if (is.na(oc)) oc <- 0
+                      if (oc > 0) {
+                        dtmp[off_i] <- dtmp[off_i] + oc
+                      } else {
+                        dtmp[off_i] <- dtmp[off_i] - oc
+                      }
+                    }
                   }
                 }
                 ## end   of specific in v1.94
